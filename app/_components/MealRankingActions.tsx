@@ -1,5 +1,3 @@
-import { FC } from "react";
-
 import Meal from "@/app/_types/Meal";
 
 interface Props {
@@ -11,7 +9,7 @@ interface Props {
 const selectButtonText = "This one";
 const hideButtonText = "I didn't eat this";
 
-const MealRankingActions: FC<Props> = ({ meal, onSelect, onHide }) => {
+export default function MealRankingActions({ meal, onSelect, onHide }: Props) {
   return (
     <div className="d-grid gap-2 d-md-flex">
       <button type="button" className="btn btn-primary" onClick={() => onSelect(meal)}>
@@ -24,6 +22,4 @@ const MealRankingActions: FC<Props> = ({ meal, onSelect, onHide }) => {
       )}
     </div>
   );
-};
-
-export default MealRankingActions;
+}
