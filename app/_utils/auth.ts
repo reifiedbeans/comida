@@ -2,9 +2,6 @@ import NextAuth, { NextAuthConfig } from "next-auth";
 import Passage from "next-auth/providers/passage";
 import { redirect } from "next/navigation";
 
-import { db } from "@/db";
-import { users } from "@/db/schema";
-
 const config = {
   basePath: "/auth",
   providers: [Passage({})],
@@ -12,13 +9,6 @@ const config = {
     async jwt({ profile, token, trigger }) {
       if (profile?.sub) {
         token.passageUserId = profile.sub;
-
-        if (trigger === "signIn") {
-          await db
-            .insert(users)
-            .values({ id: profile.sub, rankedMeals: [], unrankedMeals: [] })
-            .onConflictDoNothing();
-        }
       }
       return token;
     },

@@ -18,18 +18,10 @@ export const meals = pgTable("meals", {
     .notNull(),
 });
 
-export const users = pgTable("users", {
-  id: text("id").primaryKey(),
-  rankedMeals: uuid("ranked_meals").array().notNull(),
-  unrankedMeals: uuid("unranked_meals").array().notNull(),
-});
-
 export const userRankings = pgTable(
   "user_rankings",
   {
-    userId: text("user_id")
-      .references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" })
-      .notNull(),
+    userId: text("user_id").notNull(),
     seasonId: text("season_id")
       .references(() => seasons.id, { onDelete: "cascade", onUpdate: "cascade" })
       .notNull(),
