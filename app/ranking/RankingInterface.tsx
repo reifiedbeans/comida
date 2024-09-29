@@ -6,11 +6,12 @@ import FullPageOverlayLoader from "@/app/_components/FullPageOverlayLoader";
 import MealCard from "@/app/_components/MealCard";
 import MealRankingActions from "@/app/_components/MealRankingActions";
 import usePreventNavigation from "@/app/_hooks/usePreventNavigation";
-import Meal from "@/app/_types/Meal";
 import { addUnrankedMeal, setMealRankings } from "@/app/actions";
+import type { Meal, Season, UserRankings } from "@/db/schema";
 
 interface Props {
-  readonly mealRanks: Meal["id"][];
+  readonly seasonId: Season["id"];
+  readonly mealRanks: UserRankings["rankedMeals"];
   readonly newMeal: Meal;
   readonly referenceMeals: Meal[];
 }
@@ -19,7 +20,7 @@ function getMidpoint({ start, end }: { start: number; end: number }) {
   return start + Math.floor((end - start) / 2);
 }
 
-export default function RankingInterface({ mealRanks, newMeal, referenceMeals }: Props) {
+export default function RankingInterface({ seasonId, mealRanks, newMeal, referenceMeals }: Props) {
   const initialReferenceWindow = { start: 0, end: referenceMeals.length - 1 };
   const [referenceWindow, setReferenceWindow] = useState(initialReferenceWindow);
 
@@ -48,7 +49,7 @@ export default function RankingInterface({ mealRanks, newMeal, referenceMeals }:
 
       const newRankings = mealRanks.toSpliced(referenceMealIndex, 1, ...rankingReplacement);
       startMutation(async () => {
-        await setMealRankings(newRankings);
+        await setMealRankings(seasonId, newRankings);
         setIsDirty(false);
       });
     } else {
@@ -58,7 +59,7 @@ export default function RankingInterface({ mealRanks, newMeal, referenceMeals }:
 
   function handleHide(meal: Meal) {
     startMutation(async () => {
-      await addUnrankedMeal(meal.id);
+      await addUnrankedMeal(seasonId, meal.id);
     });
   }
 

@@ -17,15 +17,16 @@ import { useId, useOptimistic, useTransition } from "react";
 
 import MealsTable from "@/app/_components/MealsTable";
 import usePreventNavigation from "@/app/_hooks/usePreventNavigation";
-import Meal from "@/app/_types/Meal";
 import { setMealRankings } from "@/app/actions";
+import type { Meal, Season, UserRankings } from "@/db/schema";
 
 interface Props {
+  readonly seasonId: Season["id"];
+  readonly mealRanks: UserRankings["rankedMeals"];
   readonly allMeals: Map<Meal["id"], Meal>;
-  readonly mealRanks: Meal["id"][];
 }
 
-export default function RankedMealsTable({ allMeals, mealRanks }: Props) {
+export default function RankedMealsTable({ seasonId, mealRanks, allMeals }: Props) {
   const dndContextId = useId();
   const [optimisticRanks, setOptimisticRanks] = useOptimistic(
     mealRanks,
@@ -48,7 +49,7 @@ export default function RankedMealsTable({ allMeals, mealRanks }: Props) {
       const newRanks = arrayMove(mealRanks, oldIndex, newIndex);
       startMutation(async () => {
         setOptimisticRanks(newRanks);
-        await setMealRankings(newRanks);
+        await setMealRankings(seasonId, newRanks);
       });
     }
   }

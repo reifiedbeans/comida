@@ -3,18 +3,26 @@
 import { revalidatePath } from "next/cache";
 
 import { ensureAuthorization } from "@/app/_utils/auth";
-import { getUser, setUserMealRankings, setUserUnrankedMeals } from "@/app/_utils/dataAccess";
-import { users } from "@/db/schema";
+import {
+  getUserRankings,
+  upsertUserMealRankings,
+  upsertUserUnrankedMeals,
+} from "@/app/_utils/dataAccess";
+import { Meal, UserRankings } from "@/db/schema";
 
-export async function setMealRankings(newRankings: typeof users.$inferSelect.rankedMeals) {
+export async function setMealRankings(
+  seasonId: UserRankings["seasonId"],
+  newRankings: UserRankings["rankedMeals"],
+) {
   const { user } = await ensureAuthorization();
-  await setUserMealRankings(user.id, newRankings);
+  await upsertUserMealRankings(user.id, seasonId, newRankings);
   revalidatePath("/");
 }
 
-export async function addUnrankedMeal(mealId: (typeof users.$inferSelect.unrankedMeals)[number]) {
+export async function addUnrankedMeal(seasonId: UserRankings["seasonId"], mealId: Meal["id"]) {
   const { user } = await ensureAuthorization();
-  const { unrankedMeals } = await getUser(user.id);
-  await setUserUnrankedMeals(user.id, [...unrankedMeals, mealId]);
+  const userRankings = await getUserRankings(user.id, seasonId);
+  const existingUnrankedMeals = userRankings?.unrankedMeals ?? [];
+  await upsertUserUnrankedMeals(user.id, seasonId, [...existingUnrankedMeals, mealId]);
   revalidatePath("/");
 }

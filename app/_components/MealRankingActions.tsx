@@ -1,4 +1,4 @@
-import Meal from "@/app/_types/Meal";
+import type { Meal } from "@/db/schema";
 
 interface Props {
   readonly meal: Meal;

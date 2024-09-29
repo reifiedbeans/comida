@@ -4,8 +4,8 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-
 import { CSS } from "@dnd-kit/utilities";
 
 import RowDragHandle from "@/app/_components/RowDragHandle";
-import Meal from "@/app/_types/Meal";
 import { formatDate } from "@/app/_utils/date";
+import type { Meal } from "@/db/schema";
 
 interface MealRowProps {
   readonly meal: Meal;

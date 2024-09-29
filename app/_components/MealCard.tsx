@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 
-import Meal from "@/app/_types/Meal";
 import { formatDate } from "@/app/_utils/date";
+import type { Meal } from "@/db/schema";
 
 interface Props {
   readonly meal: Meal;

@@ -3,17 +3,29 @@ import Link from "next/link";
 
 import CenteredContent from "@/app/_components/CenteredContent";
 import { ensureAuthorization } from "@/app/_utils/auth";
-import { getUserAndAllMeals } from "@/app/_utils/dataAccess";
+import { getUserRankingsAndMeals } from "@/app/_utils/dataAccess";
+import { BadRequestError } from "@/app/_utils/errors";
+import { PageProps } from "@/app/_utils/page";
+import { getParamValue, SearchParamKey } from "@/app/_utils/params";
 import RankingInterface from "@/app/ranking/RankingInterface";
 
-export default async function RankingPage() {
+export default async function RankingPage({ searchParams }: PageProps) {
   const session = await ensureAuthorization();
-  const { user, allMeals } = await getUserAndAllMeals({ userId: session.user.id });
-  const seenMeals = [...user.rankedMeals, ...user.unrankedMeals];
-  const newMeals = Array.from(allMeals.values()).filter(({ id }) => !seenMeals.includes(id));
+  const userId = session.user.id;
+  const seasonId = getParamValue(SearchParamKey.SEASON, searchParams);
 
-  let referenceMeals = _.chain(user.rankedMeals)
-    .map((id) => allMeals.get(id))
+  if (!seasonId) {
+    throw new BadRequestError(
+      "Season param was not passed",
+      `Search param '${SearchParamKey.SEASON.valueOf()}' is required`,
+    );
+  }
+
+  const userDataAndMeals = await getUserRankingsAndMeals(userId, seasonId);
+  const { newMeals, rankedMeals, seasonMeals } = userDataAndMeals;
+
+  let referenceMeals = _.chain(rankedMeals)
+    .map((id) => seasonMeals.get(id))
     .compact()
     .value();
   if (referenceMeals.length === 0) {
@@ -34,8 +46,9 @@ export default async function RankingPage() {
   return (
     <>
       <RankingInterface
+        seasonId={seasonId}
         newMeal={newMeals[0]}
-        mealRanks={user.rankedMeals}
+        mealRanks={rankedMeals}
         referenceMeals={referenceMeals}
       />
       <div className="mt-4">

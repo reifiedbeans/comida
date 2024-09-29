@@ -1,13 +1,18 @@
+import Link from "next/link";
+
 import CenteredContent from "@/app/_components/CenteredContent";
-import RankedMealsTable from "@/app/_components/RankedMealsTable";
-import RankMealsButton from "@/app/_components/RankMealsButton";
 import { auth, signIn } from "@/app/_utils/auth";
-import { getUserAndAllMeals } from "@/app/_utils/dataAccess";
+import { getAllSeasons, getUserRankingsAndMeals } from "@/app/_utils/dataAccess";
+import { BadRequestError } from "@/app/_utils/errors";
+import { PageProps } from "@/app/_utils/page";
+import { buildParamString, getParamValue, SearchParamKey } from "@/app/_utils/params";
+import SeasonRankings from "@/app/SeasonRankings";
 
-export default async function HomePage() {
+export default async function HomePage({ searchParams }: PageProps) {
   const session = await auth();
+  const userId = session?.user?.id;
 
-  if (!session?.user?.id) {
+  if (!userId) {
     return (
       <CenteredContent>
         <h2>Welcome</h2>
@@ -25,26 +30,38 @@ export default async function HomePage() {
     );
   }
 
-  const { user, allMeals } = await getUserAndAllMeals({ userId: session.user.id });
-  const seenMeals = [...user.rankedMeals, ...user.unrankedMeals];
-  const newMeals = Array.from(allMeals.values()).filter(({ id }) => !seenMeals.includes(id));
+  const seasons = await getAllSeasons();
 
-  if (user.rankedMeals.length === 0) {
-    return (
-      <CenteredContent>
-        <div className="fs-1">😔</div>
-        <div>No meals ranked yet</div>
-        {newMeals.length > 1 && <RankMealsButton numNewMeals={newMeals.length} />}
-      </CenteredContent>
-    );
+  const defaultSeasonId = Array.from(seasons.values())[0].id;
+  const currentSeasonId = getParamValue(SearchParamKey.SEASON, searchParams) ?? defaultSeasonId;
+  const currentSeason = seasons.get(currentSeasonId);
+  if (!currentSeason) {
+    throw new BadRequestError(`Season with ID ${currentSeasonId} does not exist`);
   }
 
+  const userDataAndMeals = await getUserRankingsAndMeals(userId, currentSeasonId);
+
   return (
-    <>
-      {newMeals.length > 0 && <RankMealsButton numNewMeals={newMeals.length} />}
-      <h2>Your ranked meals</h2>
-      <RankedMealsTable mealRanks={user.rankedMeals} allMeals={allMeals} />
-      {/* Hidden meals table? */}
-    </>
+    <div className="h-100 d-flex flex-column">
+      <ul className="nav nav-tabs">
+        {Array.from(seasons.values()).map((season) => {
+          const isCurrentSeason = currentSeasonId === season.id;
+          return (
+            <li className="nav-item" key={season.id}>
+              <Link
+                href={`/?${buildParamString({ [SearchParamKey.SEASON]: season.id })}`}
+                className={isCurrentSeason ? "nav-link active" : "nav-link"}
+                {...(isCurrentSeason && { "aria-current": "page" })}
+              >
+                {season.name}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="flex-grow-1">
+        <SeasonRankings seasonId={currentSeasonId} {...userDataAndMeals} />
+      </div>
+    </div>
   );
 }

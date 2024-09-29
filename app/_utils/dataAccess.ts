@@ -1,63 +1,66 @@
-import { eq } from "drizzle-orm";
-import _ from "lodash";
+import { and, desc, eq } from "drizzle-orm";
 
+import { mapOf } from "@/app/_utils/map";
 import { db } from "@/db";
-import { users } from "@/db/schema";
+import { Meal, meals, seasons, UserRankings, userRankings } from "@/db/schema";
 
-export async function getUser(id: string) {
-  const user = await db.query.users.findFirst({ where: eq(users.id, id) });
-  if (user === undefined) {
-    throw new Error(`User with id ${id} does not exist`);
-  }
-
-  return user;
+export async function getAllSeasons() {
+  return mapOf(await db.query.seasons.findMany({ orderBy: desc(seasons.startDate) }));
 }
 
-export async function getAllMeals() {
-  return db.query.meals.findMany();
-}
-
-export async function getUserAndAllMeals({ userId }: { userId: string }) {
-  const userData = getUser(userId);
-  const mealsData = getAllMeals();
-  const [user, allMealsList] = await Promise.all([userData, mealsData]);
-  const allMeals = new Map<(typeof allMealsList)[number]["id"], (typeof allMealsList)[number]>();
-  allMealsList.forEach((meal) => allMeals.set(meal.id, meal));
-  return { user, allMeals };
-}
-
-export async function setUserMealRankings(
-  userId: string,
-  newRankings: typeof users.$inferSelect.rankedMeals,
+export async function getUserRankings(
+  userId: UserRankings["userId"],
+  seasonId: UserRankings["seasonId"],
 ) {
-  return db.update(users).set({ rankedMeals: newRankings }).where(eq(users.id, userId));
-}
-
-export async function setUserUnrankedMeals(
-  userId: string,
-  newUnrankedMeals: typeof users.$inferSelect.unrankedMeals,
-) {
-  return db.update(users).set({ unrankedMeals: newUnrankedMeals }).where(eq(users.id, userId));
-}
-
-export async function getOverallRanks() {
-  const users = await db.query.users.findMany();
-  const userMealScores = new Map<string, number[]>();
-
-  for (const { rankedMeals } of users) {
-    for (const meal of rankedMeals) {
-      const currentScores = userMealScores.get(meal) ?? [];
-      const rank = rankedMeals.indexOf(meal);
-      if (rank >= 0) {
-        const score = 1 - rank / rankedMeals.length;
-        userMealScores.set(meal, [...currentScores, score]);
-      }
-    }
-  }
-
-  const overallScores = Array.from(userMealScores.entries()).map(([meal, scores]) => {
-    return { meal, score: _.mean(scores) };
+  return db.query.userRankings.findFirst({
+    where: and(eq(userRankings.userId, userId), eq(userRankings.seasonId, seasonId)),
   });
+}
 
-  return overallScores.toSorted(({ score: a }, { score: b }) => b - a).map(({ meal }) => meal);
+export async function getSeasonMeals(seasonId: Meal["seasonId"]) {
+  return mapOf(await db.query.meals.findMany({ where: eq(meals.seasonId, seasonId) }));
+}
+
+export async function getUserRankingsAndMeals(
+  userId: UserRankings["userId"],
+  seasonId: UserRankings["seasonId"],
+) {
+  const [userRankings, seasonMeals] = await Promise.all([
+    getUserRankings(userId, seasonId),
+    getSeasonMeals(seasonId),
+  ]);
+  const rankedMeals = userRankings?.rankedMeals ?? [];
+  const unrankedMeals = userRankings?.unrankedMeals ?? [];
+
+  const seenMeals = [...rankedMeals, ...unrankedMeals];
+  const newMeals = Array.from(seasonMeals.values()).filter(({ id }) => !seenMeals.includes(id));
+  return { rankedMeals, unrankedMeals, newMeals, seasonMeals };
+}
+
+export async function upsertUserMealRankings(
+  userId: UserRankings["userId"],
+  seasonId: UserRankings["seasonId"],
+  rankedMeals: UserRankings["rankedMeals"],
+) {
+  return db
+    .insert(userRankings)
+    .values({ userId, seasonId, rankedMeals, unrankedMeals: [] })
+    .onConflictDoUpdate({
+      target: [userRankings.userId, userRankings.seasonId],
+      set: { rankedMeals },
+    });
+}
+
+export async function upsertUserUnrankedMeals(
+  userId: UserRankings["userId"],
+  seasonId: UserRankings["seasonId"],
+  unrankedMeals: UserRankings["unrankedMeals"],
+) {
+  return db
+    .insert(userRankings)
+    .values({ userId, seasonId, rankedMeals: [], unrankedMeals })
+    .onConflictDoUpdate({
+      target: [userRankings.userId, userRankings.seasonId],
+      set: { unrankedMeals },
+    });
 }
