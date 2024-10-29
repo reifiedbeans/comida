@@ -8,7 +8,8 @@ import { PageProps } from "@/app/_utils/page";
 import { buildParamString, getParamValue, SearchParamKey } from "@/app/_utils/params";
 import SeasonRankings from "@/app/SeasonRankings";
 
-export default async function HomePage({ searchParams }: PageProps) {
+export default async function HomePage(props: PageProps) {
+  const searchParams = await props.searchParams;
   const session = await auth();
   const userId = session?.user?.id;
 

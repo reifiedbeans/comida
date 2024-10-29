@@ -9,7 +9,8 @@ import { PageProps } from "@/app/_utils/page";
 import { getParamValue, SearchParamKey } from "@/app/_utils/params";
 import RankingInterface from "@/app/ranking/RankingInterface";
 
-export default async function RankingPage({ searchParams }: PageProps) {
+export default async function RankingPage(props: PageProps) {
+  const searchParams = await props.searchParams;
   const session = await ensureAuthorization();
   const userId = session.user.id;
   const seasonId = getParamValue(SearchParamKey.SEASON, searchParams);

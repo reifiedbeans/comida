@@ -5,9 +5,9 @@ dotenv.config({ path: ".env.development.local" });
 
 export default defineConfig({
   schema: "./db/schema.ts",
-  driver: "pg",
+  dialect: "postgresql",
   dbCredentials: {
-    connectionString: process.env["POSTGRES_URL"]!,
+    url: process.env["POSTGRES_URL"]!,
   },
   verbose: true,
   strict: true,
